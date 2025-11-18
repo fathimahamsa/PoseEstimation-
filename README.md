@@ -1,2 +1,16 @@
-# PoseEstimation-
-This project uses MediaPipe Pose + OpenCV to detect and draw full-body pose landmarks in real time. With just a webcam, it tracks key joints and visualizes the human skeleton live—perfect for motion tracking, AI fitness tools, gesture-based controls, and CV learning.
+
+# Real-Time Pose Estimation
+
+This project uses **MediaPipe Pose** and **OpenCV** to detect and draw human pose landmarks in real time using a webcam.  
+It can recognize full-body keypoints such as shoulders, elbows, knees, and more.
+
+## 🚀 Features
+- Real-time pose detection
+- Uses MediaPipe’s lightweight & fast pose model
+- Automatically draws skeletal connections
+- Works on any standard webcam
+
+## 📌 How to Run
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
