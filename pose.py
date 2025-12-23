@@ -1,20 +1,39 @@
-import mediapipe as mp
 import cv2
-mp_pose = mp.solutions.pose
-pose = mp_pose.Pose()
-mp_draw = mp.solutions.drawing_utils
+import numpy as np
+
 cap = cv2.VideoCapture(0)
-while cap.isOpened():
+
+while True:
     ret, frame = cap.read()
     if not ret:
         break
-    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = pose.process(image_rgb)
-    if results.pose_landmarks:
-        mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-    cv2.imshow('Pose Estimation', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'): 
+    
+    # Convert to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # HSV range for BLUE color
+    lower_blue = np.array([94, 80, 2])
+    upper_blue = np.array([126, 255, 255])
+
+    # Create mask
+    mask = cv2.inRange(hsv, lower_blue, upper_blue)
+
+    # Apply mask to get blue regions
+    result = cv2.bitwise_and(frame, frame, mask=mask)
+
+    # Show windows
+    cv2.imshow("Original", frame)
+    cv2.imshow("Blue Detection", result)
+
+    # Close on 'q' press
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+    # Close when any window is closed
+    if cv2.getWindowProperty("Original", cv2.WND_PROP_VISIBLE) < 1 or \
+       cv2.getWindowProperty("Blue Detection", cv2.WND_PROP_VISIBLE) < 1:
+        break
+
 cap.release()
 cv2.destroyAllWindows()
 
