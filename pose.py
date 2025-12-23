@@ -1,42 +1,70 @@
 import cv2
-import numpy as np
+import mediapipe as mp
+import smtplib
+import os
+from email.message import EmailMessage
+from datetime import datetime
+
+# ============ EMAIL CONFIG ============
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+EMAIL_SENDER = "your@gmail.com"          # <- change
+EMAIL_PASSWORD = "your_app_password_here"      # <- change (Gmail app password)
+EMAIL_RECEIVER = "your@gmail.com"  # <- change
+
+def send_email_with_image(image_path):
+    msg = EmailMessage()
+    msg["Subject"] = "Pose Detected - Alert"
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = EMAIL_RECEIVER
+    msg.set_content("A human pose was detected. Image is attached.")
+
+    with open(image_path, "rb") as f:
+        img_data = f.read()
+        img_name = os.path.basename(image_path)
+        msg.add_attachment(img_data, maintype="image", subtype="jpeg", filename=img_name)
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+        server.send_message(msg)
+        print("Email sent!")
+
+# ============ MEDIAPIPE / OPENCV SETUP ============
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose()
+mp_draw = mp.solutions.drawing_utils
 
 cap = cv2.VideoCapture(0)
 
-while True:
+email_sent = False  # send only once per run
+
+while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
-    
-    # Convert to HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # HSV range for BLUE color
-    lower_blue = np.array([94, 80, 2])
-    upper_blue = np.array([126, 255, 255])
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = pose.process(image_rgb)
 
-    # Create mask
-    mask = cv2.inRange(hsv, lower_blue, upper_blue)
+    if results.pose_landmarks:
+        # draw pose
+        mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-    # Apply mask to get blue regions
-    result = cv2.bitwise_and(frame, frame, mask=mask)
+        # capture & send only once
+        if not email_sent:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            image_filename = f"pose_detected_{timestamp}.jpg"
+            cv2.imwrite(image_filename, frame)
+            print(f"Saved image: {image_filename}")
+            send_email_with_image(image_filename)
+            email_sent = True
 
-    # Show windows
-    cv2.imshow("Original", frame)
-    cv2.imshow("Blue Detection", result)
+    cv2.imshow('Pose Estimation', frame)
 
-    # Close on 'q' press
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-    # Close when any window is closed
-    if cv2.getWindowProperty("Original", cv2.WND_PROP_VISIBLE) < 1 or \
-       cv2.getWindowProperty("Blue Detection", cv2.WND_PROP_VISIBLE) < 1:
-        break
-
 cap.release()
+
 cv2.destroyAllWindows()
-
-
-
-
